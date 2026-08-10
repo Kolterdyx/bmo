@@ -16,6 +16,19 @@ const (
 	EvAbs EventType = 0x03
 )
 
+func (e EventType) String() string {
+	switch e {
+	case EvSyn:
+		return "EvSyn"
+	case EvKey:
+		return "EvKey"
+	case EvAbs:
+		return "EvAbs"
+	default:
+		return fmt.Sprintf("Unknown event type: %d", e)
+	}
+}
+
 type EventCode uint16
 
 const (
@@ -24,11 +37,28 @@ const (
 	BtnTouch EventCode = 0x14a
 )
 
+func (e EventCode) String() string {
+	switch e {
+	case AbsX:
+		return "AbsX"
+	case AbsY:
+		return "AbsY"
+	case BtnTouch:
+		return "BtnTouch"
+	default:
+		return fmt.Sprintf("Unknown event code: %d", e)
+	}
+}
+
 type InputEvent struct {
 	Timestamp time.Time
 	Type      EventType
 	Code      EventCode
 	Value     int32
+}
+
+func (e InputEvent) String() string {
+	return fmt.Sprintf("InputEvent{Timestamp: %v, Type: %s, Code: %s, Value: %d}", e.Timestamp, e.Type, e.Code, e.Value)
 }
 
 var (
@@ -51,7 +81,7 @@ func processInput(r io.Reader) error {
 	}
 	touchMu.Lock()
 	defer touchMu.Unlock()
-	fmt.Printf("Input event: type=%d code=%d value=%d\n", ev.Type, ev.Code, ev.Value)
+	fmt.Printf("Input event: %s\n", ev)
 	switch ev.Type {
 	case EvAbs:
 		switch ev.Code {
