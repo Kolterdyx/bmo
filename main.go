@@ -48,10 +48,17 @@ func main() {
 	}
 	isPipe := (info.Mode() & os.ModeNamedPipe) != 0
 
-	// Prime a full frame so the static background — never retransmitted
-	// again on the real hardware path below — actually reaches the panel
-	// once before the loop starts only sending the animated band.
+	// Prime a full frame: render background and the static mouth once, save
+	// the face band as a snapshot, then draw the initial eyes on top.  Every
+	// subsequent frame restores the snapshot (clearing old eye positions while
+	// keeping the mouth) rather than re-rendering the mouth from scratch.
 	background()
+	drawMouth()
+	rowBytes := width * 2
+	bandStart := faceMinY * rowBytes
+	bandEnd := (faceMaxY + 1) * rowBytes
+	staticFaceBand = make([]byte, bandEnd-bandStart)
+	copy(staticFaceBand, backbuffer[bandStart:bandEnd])
 	face()
 	if !isPipe {
 		if _, err := f.Seek(0, io.SeekStart); err != nil {
@@ -61,6 +68,22 @@ func main() {
 	if _, err := f.Write(backbuffer); err != nil {
 		panic(fmt.Errorf("priming first frame: %w", err))
 	}
+
+	go func() {
+		inputFile, err := os.Open("/dev/input/event0")
+		if err != nil {
+			panic(fmt.Errorf("opening input device: %w", err))
+		}
+		defer inputFile.Close()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				processInput(inputFile)
+			}
+		}
+	}()
 
 	for {
 		select {
@@ -75,6 +98,10 @@ func main() {
 // color format is BGR565 16bit
 
 var backbuffer = make([]byte, width*height*2)
+
+// staticFaceBand holds the face band (background + pre-rendered mouth) with
+// no eyes, used to reset the band each frame before drawing animated eyes.
+var staticFaceBand []byte
 
 func writePixel(x, y int, color uint32) {
 	i := (y*width + x) * 2
@@ -148,7 +175,8 @@ func rgb2bgr565(c uint32) uint16 {
 }
 
 func render(frontbuffer io.WriteSeeker, isPipe bool) {
-	background()
+	bandStart := faceMinY * width * 2
+	copy(backbuffer[bandStart:bandStart+len(staticFaceBand)], staticFaceBand)
 	face()
 	if err := flushFrame(frontbuffer, isPipe); err != nil {
 		panic(fmt.Errorf("swapping buffers: %w", err))

@@ -78,7 +78,6 @@ func face() {
 
 	drawEye(width/2-eyeOffsetX+dx, eyeY+dy)
 	drawEye(width/2+eyeOffsetX+dx, eyeY+dy)
-	drawMouth()
 }
 
 func updateBlink() {
@@ -231,6 +230,28 @@ func drawArcStroke(cx, cy int, halfWidth, archHeight, thickness float64, color u
 		theta := float64(i)/float64(steps)*math.Pi - math.Pi/2 // -pi/2..pi/2
 		x := float64(cx) + halfWidth*math.Sin(theta)
 		y := float64(cy) - archHeight*math.Cos(theta)
-		fillEllipse(int(math.Round(x)), int(math.Round(y)), radius, radius, color)
+		fillEllipseF(x, y, radius, radius, color)
+	}
+}
+
+// fillEllipseF is identical to fillEllipse but accepts a float64 center,
+// allowing sub-pixel stamp positioning for smoother stroked arcs.
+func fillEllipseF(cx, cy float64, rx, ry int, color uint32) {
+	if rx <= 0 || ry <= 0 {
+		return
+	}
+	rxf, ryf := float64(rx), float64(ry)
+	icx, icy := int(math.Round(cx)), int(math.Round(cy))
+	for dy := -ry - 1; dy <= ry+1; dy++ {
+		py := icy + dy
+		fy := float64(py) - cy
+		for dx := -rx - 1; dx <= rx+1; dx++ {
+			px := icx + dx
+			fx := float64(px) - cx
+			alpha := ellipseCoverage(fx, fy, rxf, ryf)
+			if alpha > 0 {
+				blendPixel(px, py, color, alpha)
+			}
+		}
 	}
 }
