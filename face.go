@@ -142,14 +142,29 @@ func fillEllipse(cx, cy, rx, ry int, color uint32) {
 // (standard analytic antialiasing for implicit shapes — cheap, no
 // supersampling loop needed).
 func ellipseCoverage(x, y, rx, ry float64) float64 {
+	nx := x / rx
+	ny := y / ry
+	d2 := nx*nx + ny*ny // normalized squared distance; boundary at 1
+
+	// The antialiased fringe is only ever ~1px wide, comfortably inside a
+	// ±30% band around the boundary. Skipping the sqrt below for pixels well
+	// inside or outside that band is what keeps the many overlapping stamps
+	// in drawArcStroke cheap.
+	const innerD2, outerD2 = 0.7 * 0.7, 1.3 * 1.3
+	if d2 <= innerD2 {
+		return 1
+	}
+	if d2 >= outerD2 {
+		return 0
+	}
+
 	gx := x / (rx * rx)
 	gy := y / (ry * ry)
 	grad := 2 * math.Sqrt(gx*gx+gy*gy)
 	if grad == 0 {
 		return 1
 	}
-	g := (x*x)/(rx*rx) + (y*y)/(ry*ry) - 1
-	dist := g / grad // signed distance in pixels; positive = outside
+	dist := (d2 - 1) / grad // signed distance in pixels; positive = outside
 	return clampF(0.5-dist, 0, 1)
 }
 
@@ -183,7 +198,12 @@ func drawArcStroke(cx, cy int, halfWidth, archHeight, thickness float64, color u
 		return
 	}
 	radius := int(math.Round(thickness / 2))
-	steps := max(int(math.Round(halfWidth+math.Abs(archHeight)))*3, 24)
+	// Space stamps about one radius apart along the curve (enough overlap for
+	// a seamless stroke, no more). Using a flat multiplier of the curve's
+	// extent regardless of thickness way oversampled thick strokes — the
+	// mouth was stamping ~300 overlapping circles where ~30 fully cover it.
+	arcLength := math.Pi * (halfWidth + math.Abs(archHeight)) / 2
+	steps := max(int(math.Ceil(arcLength/math.Max(float64(radius), 1))), 8)
 	for i := 0; i <= steps; i++ {
 		theta := float64(i)/float64(steps)*math.Pi - math.Pi/2 // -pi/2..pi/2
 		x := float64(cx) + halfWidth*math.Sin(theta)

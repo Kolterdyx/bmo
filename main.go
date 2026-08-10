@@ -146,10 +146,19 @@ func render(ctx context.Context, frontbuffer io.WriteSeeker, isPipe bool) {
 	face()
 }
 
+var backgroundPacked = rgb2bgr565(0xCFF6D5)
+
+// background is a flat fill, so recomputing rgb2bgr565 per pixel and going
+// through writePixel's bounds check 153,600 times a frame is pure overhead.
+// Pack the color once and flood the buffer with doubling copy() calls
+// (memmove under the hood) instead of a per-pixel loop.
 func background() {
-	for y := range height {
-		for x := range width {
-			writePixel(x, y, 0xCFF6D5)
-		}
+	if len(backbuffer) < 2 {
+		return
+	}
+	backbuffer[0] = byte(backgroundPacked & 0xFF)
+	backbuffer[1] = byte(backgroundPacked >> 8)
+	for filled := 2; filled < len(backbuffer); filled *= 2 {
+		copy(backbuffer[filled:], backbuffer[:filled])
 	}
 }
