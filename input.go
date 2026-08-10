@@ -69,7 +69,41 @@ var (
 	touchMu        sync.Mutex
 	touchActive    bool
 	touchX, touchY int
+
+	// tap ring buffer — all accessed under touchMu
+	tapTimes [5]time.Time
+	tapCount int
 )
+
+var (
+	easterMu    sync.Mutex
+	easterUntil time.Time
+)
+
+func isEasterEggActive() bool {
+	easterMu.Lock()
+	defer easterMu.Unlock()
+	return time.Now().Before(easterUntil)
+}
+
+// recordTap records one touch-down event and triggers the easter egg when
+// five taps occur within three seconds.  Must be called under touchMu.
+func recordTap() {
+	tapTimes[tapCount%5] = time.Now()
+	tapCount++
+	if tapCount >= 5 && time.Since(tapTimes[tapCount%5]) <= 3*time.Second {
+		triggerEasterEgg()
+	}
+}
+
+func triggerEasterEgg() {
+	easterMu.Lock()
+	easterUntil = time.Now().Add(5 * time.Second)
+	easterMu.Unlock()
+	// Reset ring buffer so rapid taps don't re-trigger immediately.
+	tapCount = 0
+	tapTimes = [5]time.Time{}
+}
 
 const (
 	touchWidth  = 4095.
@@ -101,6 +135,9 @@ func processInput(r io.Reader) error {
 		}
 	case EvKey:
 		if ev.Code == BtnTouch {
+			if ev.Value != 0 && !touchActive {
+				recordTap()
+			}
 			touchActive = ev.Value != 0
 		}
 	}

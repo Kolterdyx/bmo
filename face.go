@@ -69,6 +69,11 @@ var lookDirections = [][2]float64{
 	{-0.7, 0.7}, {0.7, 0.7},
 }
 
+const (
+	easterMsg   = "You lost the game"
+	easterScale = 3
+)
+
 func face() {
 	updateBlink()
 	updateLook()
@@ -78,6 +83,24 @@ func face() {
 
 	drawEye(width/2-eyeOffsetX+dx, eyeY+dy)
 	drawEye(width/2+eyeOffsetX+dx, eyeY+dy)
+
+	if isEasterEggActive() {
+		drawEasterEgg()
+	}
+}
+
+func drawEasterEgg() {
+	pad := easterScale * 2
+	w := textWidth(easterMsg, easterScale)
+	h := fontH * easterScale
+	x := (width - w) / 2
+	y := (height - h) / 2
+	for py := y - pad; py < y+h+pad; py++ {
+		for px := x - pad; px < x+w+pad; px++ {
+			writePixel(px, py, faceColor)
+		}
+	}
+	drawText(easterMsg, x, y, easterScale, 0xFFFFFF)
 }
 
 func updateBlink() {
