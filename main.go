@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -22,6 +23,7 @@ const (
 var version string
 
 func main() {
+	version = strings.TrimSpace(version)
 
 	if len(os.Args) < 2 {
 		fmt.Printf("Usage: %s <front buffer device>\n", os.Args[0])

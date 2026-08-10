@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"sync"
 	"time"
 )
@@ -70,9 +71,17 @@ var (
 	touchX, touchY int
 )
 
+const (
+	touchWidth  = 4095.
+	touchHeight = 4095.
+)
+
 func getTouchState() (active bool, x, y int) {
 	touchMu.Lock()
 	defer touchMu.Unlock()
+	if touchActive {
+		fmt.Printf("Getting touch state: x=%d, y=%d\n", touchX, touchY)
+	}
 	return touchActive, touchX, touchY
 }
 
@@ -89,9 +98,9 @@ func processInput(r io.Reader) error {
 	case EvAbs:
 		switch ev.Code {
 		case AbsX:
-			touchX = int(ev.Value)
+			touchX = int(math.Floor(float64(ev.Value) / touchWidth * float64(width)))
 		case AbsY:
-			touchY = int(ev.Value)
+			touchY = int(math.Floor(float64(ev.Value) / touchHeight * float64(height)))
 		case AbsPressure:
 			// Handle pressure value if needed
 		}
