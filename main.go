@@ -70,7 +70,7 @@ func main() {
 	}
 
 	go func() {
-		inputFile, err := os.Open("/dev/input/event0")
+		inputFile, err := os.Open("/dev/input/event2")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "input: %v\n", err)
 			return
