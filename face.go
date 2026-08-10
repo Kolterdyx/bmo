@@ -38,6 +38,29 @@ var (
 	targetLookX, targetLookY float64
 )
 
+// faceMinY and faceMaxY bound the fixed row range the animated face can
+// ever reach, given its geometry plus the maximum look-around and blink
+// offsets. Everything outside this band is static background, so the real
+// hardware I/O path (see flushFrame in main.go) only ever needs to
+// retransmit these rows instead of the full frame — the display's SPI bus
+// is bandwidth-bound, so sending fewer bytes is the biggest lever available
+// in software.
+var faceMinY, faceMaxY = computeFaceBand()
+
+func computeFaceBand() (int, int) {
+	eyeTop := eyeY - eyeRadius - maxLookOffset
+	eyeArchTop := eyeY - eyeArchHeight - eyeLineWidth/2 - maxLookOffset
+	eyeBottom := eyeY + eyeRadius + maxLookOffset
+	mouthTop := mouthCY - mouthLineWidth/2
+	mouthBottom := mouthCY + mouthArchHeight + mouthLineWidth/2
+
+	minY := min(eyeTop, eyeArchTop, mouthTop)
+	maxY := max(eyeBottom, mouthBottom)
+
+	const pad = 2 // covers the antialiasing fringe plus rounding
+	return max(minY-pad, 0), min(maxY+pad, height-1)
+}
+
 var lookDirections = [][2]float64{
 	{0, 0},
 	{-1, 0}, {1, 0},

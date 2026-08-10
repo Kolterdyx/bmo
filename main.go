@@ -44,12 +44,27 @@ func main() {
 		panic(err)
 	}
 	isPipe := (info.Mode() & os.ModeNamedPipe) != 0
+
+	// Prime a full frame so the static background — never retransmitted
+	// again on the real hardware path below — actually reaches the panel
+	// once before the loop starts only sending the animated band.
+	background()
+	face()
+	if !isPipe {
+		if _, err := f.Seek(0, io.SeekStart); err != nil {
+			panic(fmt.Errorf("seeking to prime first frame: %w", err))
+		}
+	}
+	if _, err := f.Write(backbuffer); err != nil {
+		panic(fmt.Errorf("priming first frame: %w", err))
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			render(ctx, f, isPipe)
+			render(f, isPipe)
 		}
 	}
 }
@@ -129,21 +144,38 @@ func rgb2bgr565(c uint32) uint16 {
 	return (bq << 11) | (gq << 5) | rq
 }
 
-func render(ctx context.Context, frontbuffer io.WriteSeeker, isPipe bool) {
-	defer func() {
-		if _, err := frontbuffer.Write(backbuffer); err != nil {
-			panic(fmt.Errorf("swapping buffers: %w", err))
-		}
-		if !isPipe {
-			_, err := frontbuffer.Seek(0, 0)
-			if err != nil {
-				panic(fmt.Errorf("seeking start: %w", err))
-			}
-		}
-	}()
-
+func render(frontbuffer io.WriteSeeker, isPipe bool) {
 	background()
 	face()
+	if err := flushFrame(frontbuffer, isPipe); err != nil {
+		panic(fmt.Errorf("swapping buffers: %w", err))
+	}
+}
+
+// flushFrame sends the current backbuffer to the device. ffplay's rawvideo
+// demuxer (the local preview path, when frontBufferDevice is a pipe) expects
+// one full, fixed-size frame per read, so pipes always get the whole buffer.
+//
+// On the real hardware path the face only ever moves within a fixed row
+// band (see face.go's faceMinY/faceMaxY) — everything else is static
+// background already on the panel — so only that band needs to be
+// retransmitted. That matters because this project's SPI-attached display
+// is bus-bandwidth bound (~150ms for a full frame at its configured 16MHz),
+// making "send fewer bytes" the biggest lever available in software.
+func flushFrame(frontbuffer io.WriteSeeker, isPipe bool) error {
+	if isPipe {
+		_, err := frontbuffer.Write(backbuffer)
+		return err
+	}
+
+	rowBytes := width * 2
+	start := faceMinY * rowBytes
+	end := (faceMaxY + 1) * rowBytes
+	if _, err := frontbuffer.Seek(int64(start), io.SeekStart); err != nil {
+		return fmt.Errorf("seeking to dirty band: %w", err)
+	}
+	_, err := frontbuffer.Write(backbuffer[start:end])
+	return err
 }
 
 var backgroundPacked = rgb2bgr565(0xCFF6D5)
