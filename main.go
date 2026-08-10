@@ -72,7 +72,8 @@ func main() {
 	go func() {
 		inputFile, err := os.Open("/dev/input/event0")
 		if err != nil {
-			panic(fmt.Errorf("opening input device: %w", err))
+			fmt.Fprintf(os.Stderr, "input: %v\n", err)
+			return
 		}
 		defer inputFile.Close()
 		for {
@@ -80,7 +81,10 @@ func main() {
 			case <-ctx.Done():
 				return
 			default:
-				processInput(inputFile)
+				if err := processInput(inputFile); err != nil {
+					fmt.Fprintf(os.Stderr, "input: %v\n", err)
+					return
+				}
 			}
 		}
 	}()

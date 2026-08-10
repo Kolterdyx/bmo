@@ -107,11 +107,17 @@ func blinkOpenness() float64 {
 }
 
 func updateLook() {
-	lookTimer--
-	if lookTimer <= 0 {
-		dir := lookDirections[rand.Intn(len(lookDirections))]
-		targetLookX, targetLookY = dir[0], dir[1]
-		lookTimer = randRange(lookMinPeriod, lookMaxPeriod)
+	if active, tx, ty := getTouchState(); active {
+		targetLookX = clampF((float64(tx)-width/2.0)/(width/2.0), -1, 1)
+		targetLookY = clampF((float64(ty)-float64(eyeY))/float64(eyeY), -1, 1)
+		lookTimer = lookMinPeriod // hold so we don't wander immediately on release
+	} else {
+		lookTimer--
+		if lookTimer <= 0 {
+			dir := lookDirections[rand.Intn(len(lookDirections))]
+			targetLookX, targetLookY = dir[0], dir[1]
+			lookTimer = randRange(lookMinPeriod, lookMaxPeriod)
+		}
 	}
 	lookX += (targetLookX - lookX) * lookEase
 	lookY += (targetLookY - lookY) * lookEase

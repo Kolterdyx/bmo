@@ -1,64 +1,84 @@
 package main
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 )
 
-// Linux Event Types and Codes
-type EventType int
+type EventType uint16
 
 const (
 	EvSyn EventType = 0x00
-	EvKey           = 0x01
-	EvAbs           = 0x03
+	EvKey EventType = 0x01
+	EvAbs EventType = 0x03
 )
 
-type EventCode int
+type EventCode uint16
 
 const (
 	AbsX     EventCode = 0x00
-	AbsY               = 0x01
-	BtnTouch           = 0x14a // 330 in decimal
+	AbsY     EventCode = 0x01
+	BtnTouch EventCode = 0x14a
 )
 
 type InputEvent struct {
 	Timestamp time.Time
 	Type      EventType
 	Code      EventCode
-	Value     int64
+	Value     int32
 }
 
-func processInput(i io.Reader) {
+var (
+	touchMu        sync.Mutex
+	touchActive    bool
+	touchX, touchY int
+)
 
-	ev, err := readEvent(i)
+func getTouchState() (active bool, x, y int) {
+	touchMu.Lock()
+	defer touchMu.Unlock()
+	return touchActive, touchX, touchY
+}
+
+func processInput(r io.Reader) error {
+	ev, err := readEvent(r)
 	if err != nil {
-		fmt.Printf("Error reading input event: %v\n", err)
-		return
+		return err
 	}
-	fmt.Printf("Input event: %+v\n", ev)
-
+	touchMu.Lock()
+	defer touchMu.Unlock()
+	switch ev.Type {
+	case EvAbs:
+		switch ev.Code {
+		case AbsX:
+			touchX = int(ev.Value)
+		case AbsY:
+			touchY = int(ev.Value)
+		}
+	case EvKey:
+		if ev.Code == BtnTouch {
+			touchActive = ev.Value != 0
+		}
+	}
+	return nil
 }
 
-func readEvent(f io.Reader) (InputEvent, error) {
-	var e InputEvent
-
-	b := make([]byte, 24)
-	if _, err := f.Read(b); err != nil {
+// readEvent reads one linux input_event from r.
+// Layout: timeval (sec uint64 + usec uint64), type uint16, code uint16, value int32 — 24 bytes total.
+func readEvent(r io.Reader) (InputEvent, error) {
+	var b [24]byte
+	if _, err := io.ReadFull(r, b[:]); err != nil {
 		return InputEvent{}, fmt.Errorf("reading input event: %w", err)
 	}
 	sec := binary.LittleEndian.Uint64(b[0:8])
 	usec := binary.LittleEndian.Uint64(b[8:16])
-	e.Timestamp = time.Unix(int64(sec), int64(usec))
-	e.Type = EventType(binary.LittleEndian.Uint16(b[16:18]))
-	e.Code = EventCode(binary.LittleEndian.Uint16(b[18:20]))
-	var value int32
-	if err := binary.Read(bytes.NewReader(b[20:]), binary.LittleEndian, &value); err != nil {
-		return InputEvent{}, fmt.Errorf("reading input event value: %w", err)
-	}
-	e.Value = int64(value)
-	return e, nil
+	return InputEvent{
+		Timestamp: time.Unix(int64(sec), int64(usec)*1000),
+		Type:      EventType(binary.LittleEndian.Uint16(b[16:18])),
+		Code:      EventCode(binary.LittleEndian.Uint16(b[18:20])),
+		Value:     int32(binary.LittleEndian.Uint32(b[20:24])),
+	}, nil
 }
