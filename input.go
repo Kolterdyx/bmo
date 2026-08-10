@@ -32,10 +32,10 @@ func (e EventType) String() string {
 type EventCode uint16
 
 const (
-	AbsX        EventCode = 0x00
-	AbsY        EventCode = 0x01
-	AbsPressure EventCode = 0x18
-	BtnTouch    EventCode = 0x14a
+	AbsX        EventCode = 0
+	AbsY        EventCode = 1
+	AbsPressure EventCode = 24
+	BtnTouch    EventCode = 330
 )
 
 func (e EventCode) String() string {
@@ -92,6 +92,8 @@ func processInput(r io.Reader) error {
 			touchX = int(ev.Value)
 		case AbsY:
 			touchY = int(ev.Value)
+		case AbsPressure:
+			// Handle pressure value if needed
 		}
 	case EvKey:
 		if ev.Code == BtnTouch {

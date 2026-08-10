@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
@@ -17,12 +18,16 @@ const (
 	height = 320
 )
 
+//go:embed version.txt
+var version string
+
 func main() {
 
 	if len(os.Args) < 2 {
 		fmt.Printf("Usage: %s <front buffer device>\n", os.Args[0])
 		os.Exit(1)
 	}
+	fmt.Printf("Starting %s (version %s) with front buffer device %s\n", os.Args[0], version, os.Args[1])
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Printf("Recovered from panic: %s\n", r)
