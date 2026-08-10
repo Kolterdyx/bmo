@@ -100,7 +100,7 @@ func processInput(r io.Reader) error {
 		case AbsX:
 			touchY = int(math.Floor((float64(ev.Value) / touchWidth) * float64(width)))
 		case AbsY:
-			touchX = -int(math.Floor((float64(ev.Value) / touchHeight) * float64(height)))
+			touchX = height - int(math.Floor((float64(ev.Value)/touchHeight)*float64(height)))
 		case AbsPressure:
 			// Handle pressure value if needed
 		}

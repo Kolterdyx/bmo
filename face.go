@@ -108,8 +108,8 @@ func blinkOpenness() float64 {
 
 func updateLook() {
 	if active, tx, ty := getTouchState(); active {
-		targetLookX = clampF((float64(tx)-width/2.0)/(width/2.0), -1, 1)
-		targetLookY = clampF((float64(ty)-float64(eyeY))/float64(eyeY), -1, 1)
+		targetLookX = clampF((float64(tx)-float64(height)/2)/(float64(height)/2), -1, 1)
+		targetLookY = clampF((float64(ty)-float64(width)/2)/(float64(width)/2), -1, 1)
 		lookTimer = lookMinPeriod // hold so we don't wander immediately on release
 	} else {
 		lookTimer--
