@@ -18,7 +18,7 @@ const (
 	blinkMinPeriod = 120 // min frames between blinks
 	blinkMaxPeriod = 300 // max frames between blinks
 
-	maxLookOffset = 14
+	maxLookOffset = 20
 	lookEase      = 0.08
 	lookMinPeriod = 90
 	lookMaxPeriod = 240
