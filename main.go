@@ -106,7 +106,7 @@ func main() {
 	}
 }
 
-// color format is BGR565 16bit
+// color format is RGB565 16bit (R at bits[15:11], G at bits[10:5], B at bits[4:0])
 
 var backbuffer = make([]byte, width*height*2)
 
@@ -119,7 +119,7 @@ func writePixel(x, y int, color uint32) {
 	if i < 0 || i+1 >= len(backbuffer) {
 		return
 	}
-	c := rgb2bgr565(color)
+	c := rgb565(color)
 	backbuffer[(y*width+x)*2] = byte(c & 0xFF)
 	backbuffer[(y*width+x)*2+1] = byte((c >> 8) & 0xFF)
 }
@@ -135,9 +135,9 @@ func readPixel(x, y int) uint32 {
 		return 0
 	}
 	c := uint16(backbuffer[i]) | uint16(backbuffer[i+1])<<8
-	b5 := (c >> 11) & 0x1F
+	r5 := (c >> 11) & 0x1F
 	g6 := (c >> 5) & 0x3F
-	r5 := c & 0x1F
+	b5 := c & 0x1F
 	r8 := uint32((r5 << 3) | (r5 >> 2))
 	g8 := uint32((g6 << 2) | (g6 >> 4))
 	b8 := uint32((b5 << 3) | (b5 >> 2))
@@ -174,15 +174,14 @@ func quantize6(v uint8) uint16 {
 	return uint16((uint32(v)*63 + 128) / 255)
 }
 
-func rgb2bgr565(c uint32) uint16 {
+func rgb565(c uint32) uint16 {
 	r := uint8(c >> 16 & 0xFF)
 	g := uint8(c >> 8 & 0xFF)
 	b := uint8(c & 0xFF)
 	rq := quantize5(r)
 	gq := quantize6(g)
 	bq := quantize5(b)
-
-	return (bq << 11) | (gq << 5) | rq
+	return (rq << 11) | (gq << 5) | bq
 }
 
 var easterEggPrev bool
@@ -264,7 +263,7 @@ func flushFrame(frontbuffer io.WriteSeeker, isPipe bool) error {
 	return err
 }
 
-var backgroundPacked = rgb2bgr565(0x5FD98A)
+var backgroundPacked = rgb565(0x5FD98A)
 
 // background is a flat fill, so recomputing rgb2bgr565 per pixel and going
 // through writePixel's bounds check 153,600 times a frame is pure overhead.
