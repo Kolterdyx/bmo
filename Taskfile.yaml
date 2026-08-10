@@ -1,0 +1,43 @@
+version: '3'
+
+vars:
+  VERSION:
+    sh: cat version.txt | tr -d '[:space:]'
+  BINARY: bmo
+  DIST: dist
+  ASSET: "{{.BINARY}}-linux-arm64"
+
+tasks:
+  build:
+    desc: Cross-compile the release binary for Raspberry Pi OS 64-bit (linux/arm64)
+    cmds:
+      - mkdir -p {{.DIST}}
+      # CGO_ENABLED=0 gives a fully static binary, so it runs on Raspberry Pi
+      # OS 64-bit regardless of its glibc version, and lets us cross-compile
+      # without an aarch64 C toolchain.
+      - GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o {{.DIST}}/{{.ASSET}} .
+    generates:
+      - "{{.DIST}}/{{.ASSET}}"
+    sources:
+      - "*.go"
+      - go.mod
+
+  bump:
+    desc: Increment version.txt to the next release number
+    cmds:
+      - echo $(( $(cat version.txt) + 1 )) > version.txt
+      - cat version.txt
+
+  release:
+    desc: Build the release binary, tag the repo, and publish a GitHub release with the binary attached
+    deps:
+      - build
+    cmds:
+      - git tag v{{.VERSION}}
+      - git push origin v{{.VERSION}}
+      - gh release create v{{.VERSION}} {{.DIST}}/{{.ASSET}} --title "v{{.VERSION}}" --notes "Release v{{.VERSION}}"
+
+  clean:
+    desc: Remove build artifacts
+    cmds:
+      - rm -rf {{.DIST}}
