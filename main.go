@@ -77,7 +77,7 @@ func main() {
 	}
 
 	go func() {
-		inputFile, err := os.Open("/dev/input/event2")
+		inputFile, err := os.Open("/dev/input/by-path/platform-fe204000.spi-cs-1-event")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "input: %v\n", err)
 			return
