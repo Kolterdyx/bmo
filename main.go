@@ -16,8 +16,7 @@ const (
 	width  = 480
 	height = 320
 
-	frontBufferDevice = "/tmp/bmo_fb"
-	//frontBufferDevice = "/dev/fb1"
+	frontBufferDevice = "/dev/fb1"
 )
 
 func main() {
