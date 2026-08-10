@@ -50,6 +50,7 @@ func processInput(r io.Reader) error {
 	}
 	touchMu.Lock()
 	defer touchMu.Unlock()
+	fmt.Printf("Input event: type=%d code=%d value=%d\n", ev.Type, ev.Code, ev.Value)
 	switch ev.Type {
 	case EvAbs:
 		switch ev.Code {
