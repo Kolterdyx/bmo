@@ -178,7 +178,7 @@ func flushFrame(frontbuffer io.WriteSeeker, isPipe bool) error {
 	return err
 }
 
-var backgroundPacked = rgb2bgr565(0x799928)
+var backgroundPacked = rgb2bgr565(0x5FD98A)
 
 // background is a flat fill, so recomputing rgb2bgr565 per pixel and going
 // through writePixel's bounds check 153,600 times a frame is pure overhead.
