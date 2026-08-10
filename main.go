@@ -15,12 +15,14 @@ const (
 
 	width  = 480
 	height = 320
-
-	frontBufferDevice = "/dev/fb1"
 )
 
 func main() {
 
+	if len(os.Args) < 2 {
+		fmt.Printf("Usage: %s <front buffer device>\n", os.Args[0])
+		os.Exit(1)
+	}
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Printf("Recovered from panic: %s\n", r)
@@ -31,7 +33,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 	t := time.NewTicker(time.Second / frameRate)
-	f, err := os.OpenFile(frontBufferDevice, os.O_WRONLY, 0)
+	f, err := os.OpenFile(os.Args[1], os.O_WRONLY, 0)
 	if err != nil {
 		panic(fmt.Errorf("opening front buffer: %w", err))
 	}
