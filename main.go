@@ -24,6 +24,7 @@ func main() {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Printf("Recovered from panic: %s\n", r)
+			os.Exit(1)
 		}
 	}()
 
