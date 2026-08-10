@@ -44,6 +44,7 @@ func getTouchState() (active bool, x, y int) {
 }
 
 func processInput(r io.Reader) error {
+	fmt.Printf("Processing input events from %T\n", r)
 	ev, err := readEvent(r)
 	if err != nil {
 		return err
