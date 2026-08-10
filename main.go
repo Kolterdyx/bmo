@@ -185,13 +185,57 @@ func rgb2bgr565(c uint32) uint16 {
 	return (bq << 11) | (gq << 5) | rq
 }
 
+var easterEggPrev bool
+
 func render(frontbuffer io.WriteSeeker, isPipe bool) {
+	active := isEasterEggActive()
+
+	if active && !easterEggPrev {
+		// Egg just activated: black out the full screen and draw the overlay.
+		clear(backbuffer)
+		drawEasterEgg()
+		if err := flushAll(frontbuffer, isPipe); err != nil {
+			panic(fmt.Errorf("displaying easter egg: %w", err))
+		}
+		easterEggPrev = true
+		return
+	}
+
+	if !active && easterEggPrev {
+		// Egg just deactivated: restore the full frame and resume normal rendering.
+		background()
+		bandStart := faceMinY * width * 2
+		copy(backbuffer[bandStart:bandStart+len(staticFaceBand)], staticFaceBand)
+		face()
+		if err := flushAll(frontbuffer, isPipe); err != nil {
+			panic(fmt.Errorf("restoring after easter egg: %w", err))
+		}
+		easterEggPrev = false
+		return
+	}
+
+	if active {
+		return // text is static; nothing to update mid-egg
+	}
+
 	bandStart := faceMinY * width * 2
 	copy(backbuffer[bandStart:bandStart+len(staticFaceBand)], staticFaceBand)
 	face()
 	if err := flushFrame(frontbuffer, isPipe); err != nil {
 		panic(fmt.Errorf("swapping buffers: %w", err))
 	}
+}
+
+// flushAll writes the entire backbuffer to frontbuffer — used for transitions
+// that change pixels outside the normal face band (e.g. easter egg).
+func flushAll(frontbuffer io.WriteSeeker, isPipe bool) error {
+	if !isPipe {
+		if _, err := frontbuffer.Seek(0, io.SeekStart); err != nil {
+			return fmt.Errorf("seeking for full flush: %w", err)
+		}
+	}
+	_, err := frontbuffer.Write(backbuffer)
+	return err
 }
 
 // flushFrame sends the current backbuffer to the device. ffplay's rawvideo

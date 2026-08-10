@@ -83,10 +83,6 @@ func face() {
 
 	drawEye(width/2-eyeOffsetX+dx, eyeY+dy)
 	drawEye(width/2+eyeOffsetX+dx, eyeY+dy)
-
-	if isEasterEggActive() {
-		drawEasterEgg()
-	}
 }
 
 func drawEasterEgg() {
@@ -97,7 +93,7 @@ func drawEasterEgg() {
 	y := (height - h) / 2
 	for py := y - pad; py < y+h+pad; py++ {
 		for px := x - pad; px < x+w+pad; px++ {
-			writePixel(px, py, faceColor)
+			writePixel(px, py, 0xCC0000)
 		}
 	}
 	drawText(easterMsg, x, y, easterScale, 0xFFFFFF)
