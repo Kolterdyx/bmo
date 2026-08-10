@@ -32,9 +32,10 @@ func (e EventType) String() string {
 type EventCode uint16
 
 const (
-	AbsX     EventCode = 0x00
-	AbsY     EventCode = 0x01
-	BtnTouch EventCode = 0x14a
+	AbsX        EventCode = 0x00
+	AbsY        EventCode = 0x01
+	AbsPressure EventCode = 0x18
+	BtnTouch    EventCode = 0x14a
 )
 
 func (e EventCode) String() string {
