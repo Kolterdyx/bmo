@@ -44,6 +44,8 @@ func (e EventCode) String() string {
 		return "AbsX"
 	case AbsY:
 		return "AbsY"
+	case AbsPressure:
+		return "AbsPressure"
 	case BtnTouch:
 		return "BtnTouch"
 	default:
