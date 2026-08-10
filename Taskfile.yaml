@@ -25,7 +25,12 @@ tasks:
   bump:
     desc: Increment version.txt to the next release number
     cmds:
-      - echo $(( $(cat version.txt) + 1 )) > version.txt
+      # split into two statements: reading version.txt inside the same
+      # command that redirects into it races the truncation, so the read
+      # must fully finish (and close the file) before the write opens it.
+      - |
+        NEW=$(( $(cat version.txt) + 1 ))
+        echo "$NEW" > version.txt
       - cat version.txt
 
   release:

@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	frameRate = 60
+	frameRate = 30
 
 	width  = 480
 	height = 320
