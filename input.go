@@ -79,21 +79,16 @@ const (
 func getTouchState() (active bool, x, y int) {
 	touchMu.Lock()
 	defer touchMu.Unlock()
-	if touchActive {
-		fmt.Printf("Getting touch state: x=%d, y=%d\n", touchX, touchY)
-	}
 	return touchActive, touchX, touchY
 }
 
 func processInput(r io.Reader) error {
-	fmt.Printf("Processing input events from %T\n", r)
 	ev, err := readEvent(r)
 	if err != nil {
 		return err
 	}
 	touchMu.Lock()
 	defer touchMu.Unlock()
-	fmt.Printf("Input event: %s\n", ev)
 	switch ev.Type {
 	case EvAbs:
 		switch ev.Code {
