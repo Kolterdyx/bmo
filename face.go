@@ -19,7 +19,7 @@ const (
 	blinkMaxPeriod = 300 // max frames between blinks
 
 	maxLookOffset = 20
-	lookEase      = 0.08
+	lookEase      = 0.16
 	lookMinPeriod = 90
 	lookMaxPeriod = 240
 
@@ -38,24 +38,25 @@ var (
 	targetLookX, targetLookY float64
 )
 
-// faceMinY and faceMaxY bound the fixed row range the animated face can
-// ever reach, given its geometry plus the maximum look-around and blink
-// offsets. Everything outside this band is static background, so the real
-// hardware I/O path (see flushFrame in main.go) only ever needs to
-// retransmit these rows instead of the full frame — the display's SPI bus
-// is bandwidth-bound, so sending fewer bytes is the biggest lever available
-// in software.
+// faceMinY and faceMaxY bound the fixed row range the animated eyes can
+// ever reach, given their geometry plus the maximum look-around and blink
+// offsets. The mouth is drawn once at startup and never redrawn, so it's
+// deliberately excluded here even though it overlaps this band lower down
+// (mouthBottom) — including it would retransmit static, unchanging pixels
+// every frame for no reason. Everything outside this band is static
+// background/mouth, so the real hardware I/O path (see flushFrame in
+// main.go) only ever needs to retransmit these rows instead of the full
+// frame — the display's SPI bus is bandwidth-bound, so sending fewer bytes
+// is the biggest lever available in software.
 var faceMinY, faceMaxY = computeFaceBand()
 
 func computeFaceBand() (int, int) {
 	eyeTop := eyeY - eyeRadius - maxLookOffset
 	eyeArchTop := eyeY - eyeArchHeight - eyeLineWidth/2 - maxLookOffset
 	eyeBottom := eyeY + eyeRadius + maxLookOffset
-	mouthTop := mouthCY - mouthLineWidth/2
-	mouthBottom := mouthCY + mouthArchHeight + mouthLineWidth/2
 
-	minY := min(eyeTop, eyeArchTop, mouthTop)
-	maxY := max(eyeBottom, mouthBottom)
+	minY := min(eyeTop, eyeArchTop)
+	maxY := eyeBottom
 
 	const pad = 2 // covers the antialiasing fringe plus rounding
 	return max(minY-pad, 0), min(maxY+pad, height-1)
