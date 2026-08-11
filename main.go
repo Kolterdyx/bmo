@@ -215,6 +215,7 @@ func render(frontbuffer io.WriteSeeker, isPipe bool) {
 	if !active && easterEggPrev {
 		// Egg just deactivated: restore the full frame and resume normal rendering.
 		background()
+		drawMouth()
 		bandStart := faceMinY * width * 2
 		copy(backbuffer[bandStart:bandStart+len(staticFaceBand)], staticFaceBand)
 		face()
