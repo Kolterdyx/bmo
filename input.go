@@ -9,6 +9,11 @@ import (
 	"time"
 )
 
+const (
+	easterTapCount  = 15              // taps required to trigger the easter egg
+	easterTapWindow = 4 * time.Second // time window in which they must occur
+)
+
 type EventType uint16
 
 const (
@@ -71,7 +76,7 @@ var (
 	touchX, touchY int
 
 	// tap ring buffer — all accessed under touchMu
-	tapTimes [5]time.Time
+	tapTimes [easterTapCount]time.Time
 	tapCount int
 )
 
@@ -87,11 +92,11 @@ func isEasterEggActive() bool {
 }
 
 // recordTap records one touch-down event and triggers the easter egg when
-// five taps occur within three seconds.  Must be called under touchMu.
+// easterTapCount taps occur within easterTapWindow.  Must be called under touchMu.
 func recordTap() {
-	tapTimes[tapCount%5] = time.Now()
+	tapTimes[tapCount%easterTapCount] = time.Now()
 	tapCount++
-	if tapCount >= 5 && time.Since(tapTimes[tapCount%5]) <= 3*time.Second {
+	if tapCount >= easterTapCount && time.Since(tapTimes[tapCount%easterTapCount]) <= easterTapWindow {
 		triggerEasterEgg()
 	}
 }
@@ -102,7 +107,7 @@ func triggerEasterEgg() {
 	easterMu.Unlock()
 	// Reset ring buffer so rapid taps don't re-trigger immediately.
 	tapCount = 0
-	tapTimes = [5]time.Time{}
+	tapTimes = [easterTapCount]time.Time{}
 }
 
 const (
