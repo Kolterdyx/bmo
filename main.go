@@ -77,21 +77,33 @@ func main() {
 	}
 
 	go func() {
-		inputFile, err := os.Open("/dev/input/by-path/platform-fe204000.spi-cs-1-event")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "input: %v\n", err)
-			return
-		}
-		defer inputFile.Close()
-		for {
+		// The touch device node may not exist yet when this process starts
+		// (udev hasn't created it, or the touch controller is still probing),
+		// and it can also drop out and reappear later. Retry with a backoff
+		// instead of giving up after the first failure, so a slow or
+		// out-of-order boot doesn't permanently disable touch for the rest
+		// of the run.
+		const inputPath = "/dev/input/by-path/platform-fe204000.spi-cs-1-event"
+		for ctx.Err() == nil {
+			inputFile, err := os.Open(inputPath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "input: %v\n", err)
+			} else {
+				for ctx.Err() == nil {
+					if err := processInput(inputFile); err != nil {
+						fmt.Fprintf(os.Stderr, "input: %v\n", err)
+						break
+					}
+				}
+				inputFile.Close()
+			}
+			if ctx.Err() != nil {
+				return
+			}
 			select {
 			case <-ctx.Done():
 				return
-			default:
-				if err := processInput(inputFile); err != nil {
-					fmt.Fprintf(os.Stderr, "input: %v\n", err)
-					return
-				}
+			case <-time.After(time.Second):
 			}
 		}
 	}()
